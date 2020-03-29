@@ -1,15 +1,12 @@
 # Test
 
+一个提权类，不需要写脚本。（这个题目有点像后渗透提权。。
+
 获取题目ELF和源代码
 
 scp -r -P 29664  ctf@node3.buuoj.cn:/home/ctf/test.c test.c
 
 $ scp -r -P 29664  ctf@node3.buuoj.cn:/home/ctf/test test
-
-可能要用字符串拼接,或者用*来替代匹配flag，或者用大小写。。。
-[参考链接](https://www.jianshu.com/p/e13964824acf)
-
-[参考链接](https://bbs.pediy.com/thread-225418.htm)
 
 代码
 
@@ -54,7 +51,7 @@ int main(){
 
 ```
 
-通过test提权或者读取flag
+通过test提权执行命令，反弹shell或者读取flag，想办法读取flag文件。不过程序对命令进行了黑名单过滤。
 
 ![xshgPc](https://gitee.com/p0kerface/blog_image_management/raw/master/uPic/xshgPc.png)
 
@@ -83,9 +80,7 @@ int main(){
 
 
 
-flag{5183e9d8-7c0a-480d-a951-d1ee5b299381}
-
-
+获取**flag{5183e9d8-7c0a-480d-a951-d1ee5b299381}**
 
 EXP
 
@@ -100,4 +95,15 @@ for i in OD:
     print (chr(x2)+chr(x1),
 
 ```
+
+还有个解法，执行x86_64反弹一个shell。。。出题者应该没考虑到这个问题。
+
+
+
+
+
+关于类似题目的参考，字符串拼接,或者用*来替代匹配flag，或者用大小写。。。
+[参考链接](https://www.jianshu.com/p/e13964824acf)
+
+[参考链接](https://bbs.pediy.com/thread-225418.htm)
 

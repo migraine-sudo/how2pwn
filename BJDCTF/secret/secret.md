@@ -1,12 +1,10 @@
 # Secret
 
-
-
-
+一个密码机，要连续输入100次secrest才能get flag。。。显然是唬人的
 
 ![sn2I8r](https://gitee.com/p0kerface/blog_image_management/raw/master/uPic/sn2I8r.png)
 
-一个密码机，要连续输入100次secrest才能get flag。。。显然是唬人的
+
 
 ![adfasfdasfasf](https://gitee.com/p0kerface/blog_image_management/raw/master/uPic/adfasfdasfasf.png)
 
@@ -40,7 +38,7 @@ p.interactive()
 '''
 ```
 
-发现原来还有个格式化字符串漏洞。。这个才是有用的漏洞。
+发现原来还有个格式化字符串漏洞?
 
 ![YiiMNz](https://gitee.com/p0kerface/blog_image_management/raw/master/uPic/YiiMNz.png)
 
@@ -59,6 +57,23 @@ payload得改
 target=0x46d030
 value=0x12334
 payload="%"+str(value)+"c%6$lln"+p64(target)
-
 ```
+
+不知道这个格式化字符串能不能用，后来看了WP，发现是两个洞结合的。。
+
+***这个真的是一个很有意思的思路***
+
+修改存放计数的times内存，在buf中写入/bin/sh
+
+每次循环times内存都会减少1，所以把times修改为printf的got表地址，因为printf和system的值想差10.
+
+让printf的got表值减少10次，执行printf正好会执行system。
+
+退出循环，执行printf(buf)，实际上会执行system("/bin/sh")
+
+
+
+或者真的跑完。。用IDA生成asm，然后取值
+
+https://blog.csdn.net/qq_43116977/article/details/105041308
 

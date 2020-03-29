@@ -2,9 +2,9 @@
 
 # One_gadget
 
+**环境**
 
-
-这里有各种版本的[so文件](https://buuoj.cn/resources)
+这个网站提供了各种版本的[so文件](https://buuoj.cn/resources)
 
 ```c
 $ one_gadget libc-2.29.so 
@@ -28,11 +28,13 @@ constraints:
   [rsp+0x70] == NULL
 ```
 
+**思路**
+
+题目提供了printf的地址，通过偏移算出libc地址。然后用one_gadget覆盖EIP就能GETSHELL了。注意需要加载题目对应的libc地址。
+
 ![LQibhM](https://gitee.com/p0kerface/blog_image_management/raw/master/uPic/LQibhM.png)
 
 ![awPOkl](https://gitee.com/p0kerface/blog_image_management/raw/master/uPic/awPOkl.png)
-
-
 
 解题脚本
 
