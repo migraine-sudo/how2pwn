@@ -57,7 +57,7 @@ int edit()
 ```c
 add(0x18,"A"*0x18)#0 #一定要填满，这样才能和chunk_1的size构成连接
 add(0x18,"B"*0x18)#1
-edit(0,"A"*0x18)
+edit(0,"A"*0x18) #+"\x41" 加上任何单字节能够覆盖下一个chunk的size值
 show(0)
 #delete(0)
 ```
@@ -66,9 +66,13 @@ show(0)
 
 能够实现一个字节的溢出，覆盖size值，这样就能构造一个很长的fake chunk。
 
-可以伪造加长chunk，泄露libc地址。不过这里的free居然触发不了fastbin，有点奇怪。
+可以伪造加长chunk，泄露libc地址。不过这里的free居然触发不了fastbin，有点奇怪。（后面会解释原因）
+
+通过overlap泄露unsortbin的地址，计算出libc的偏移地址。如果要泄露heap的偏移地址，需要申请两个连续的chunk，chunk中会存有另一个chunk的地址。
 
 ![image-20200502143847282](/Users/migraine/Library/Application Support/typora-user-images/image-20200502143847282.png)
+
+泄露地址：
 
 ```shell
 add(0x18,"A"*0x18)#0
@@ -92,13 +96,15 @@ print("[+] libc_addr="+hex(libc))
 
 **Getshell**
 
-因为保护基本全开了，所以可以覆盖malloc_hook来实现getshell，但是这里的0x20以及以上大小的free chunk都属于unosortbin实在是奇怪，难道global_max_fast被改了？果然，罪魁祸首。
+因为保护基本全开了。不能通过覆盖got表来实现getshell。可采用的方式是malloc_hook覆盖或者，free_hook覆盖。基础要求是要实现fastbin attack。但是这里的0x20以及以上大小的free chunk都属于unosortbin实在是奇怪，难道global_max_fast被改了？果然，罪魁祸首。大于16的free chunk都会被链接到unsortbin。
 
 ![dKMUwD](https://gitee.com/p0kerface/blog_image_management/raw/master/uPic/dKMUwD.png)
 
-使用unsortbin attack写一个大值覆盖**global_max_fast**,然后利用fastbin attack。
+思路使用unsortbin attack写一个大值覆盖**global_max_fast**,然后利用fastbin attack。
 
-不过由于题目问题，构造overlap之后没办法覆写unosortbin的fd。。只有在申请内存块的时候才能覆盖unsort bin，但是申请内存就会把unsortbin分配到别的链里去（small bins），绕过方法是申请的内存和unsortbin中的大小某一块相同，unsortbin就不会被分配。
+构造overlap之后覆写unosortbin的bk为globa_max_fast-0x10，然后申请一块较大内存即可触发。
+
+题目条件下，只有在申请内存块的同时刻才能覆盖unsort bin，但是申请内存的过程中，堆管理会遍历unsortbin寻找可用堆块。实验过程中我发现，申请之后把原本在unsortbin的chunk被分配到别的链里去（small bins），就没办法用unsortbin attack。绕过方法是申请的内存和unsortbin中的大小某一块相同，unsortbin链的chunk会被直接取下来，这样unsortbin链堆其他chunjk就会被保留。
 
 构造chunk_60 大小为0x61，包含chunk_a0。然后申请0x61(malloc(x59))
 
@@ -108,7 +114,7 @@ print("[+] libc_addr="+hex(libc))
 
 ![FqETSq](https://gitee.com/p0kerface/blog_image_management/raw/master/uPic/FqETSq.png)
 
-修改成功
+unsortbin attack成功修改**global_max_fast**
 
 ![JySmO5](https://gitee.com/p0kerface/blog_image_management/raw/master/uPic/JySmO5.png)
 
@@ -135,7 +141,7 @@ add(0x58,p64(0)*3+p64(0x21)+p64(0)*3+p64(0x21)+p64(0)+p64(global_max_fast-0x10))
 add(21,"AAAA") #触发unsortbin
 ```
 
-但是此时无法申请内存，需要修复unsortbin，但我不会。。。
+但是此时无法申请内存，需要修复unsortbin。不过我一开始想偷懒，就考虑直接用fastbin attack，修改malloc_hook。
 
 **覆盖malloc_hook**
 
@@ -149,13 +155,13 @@ add(21,"AAAA") #触发unsortbin
 
 ![GRteoJ](https://gitee.com/p0kerface/blog_image_management/raw/master/uPic/GRteoJ.png)
 
-整个逻辑到现在其实挺复杂了，free 0x61会有个fastbin的next size检测，这个要在一开始就伪造好。（图中选中区域）
+整个逻辑到现在其实挺复杂了，free 0x61（伪造的chunk）会有个fastbin的next size检测，这个要在一开始就伪造好。（图中选中区域）
 
 ![2Ew20G](https://gitee.com/p0kerface/blog_image_management/raw/master/uPic/2Ew20G.png)
 
 ![LiwnwS](https://gitee.com/p0kerface/blog_image_management/raw/master/uPic/LiwnwS.png)
 
-实现到跳转到**one_gadget**,不过全部one_gadget失效
+实现到跳转到**one_gadget**,不过全部one_gadget失效.目前为止的EXP如下
 
 ```python
 #!/usr/bin/python3
@@ -326,19 +332,19 @@ constraints:
 
 **修复unsortbin&&修改free_hook**
 
-我们尝试去修改free_hook...但是free hook还是得修复unsortbin的空间。这里可以通过修改main_arena来修改unosortbin，顺便修改top_chunk，一举两得。[参考](https://xz.aliyun.com/t/7020)
+free_hook覆盖的通用思路是覆盖main_arena+0x88(指向topchunk)，修改top chunk指向free_hook前的地址，然后申请内存，多次申请就能获取到对free chunk的读写。
+
+不过在此之前，还是得修复unsortbin的空间。这里可以通过修改main_arena来修改unosortbin，顺便修改top_chunk，一举两得。这篇[文章](https://xz.aliyun.com/t/7020)讲的很很详细。
 
 ![sDOI69](https://gitee.com/p0kerface/blog_image_management/raw/master/uPic/sDOI69.png)
 
-通过覆盖main_arena来实现fastbin attack，修复unosortbin。
+通过覆盖main_arena来实现fastbin attack，修复unosortbin。这里我们原来的chunk长度可能不够，所以可以覆盖main_arena+0x48( fastbin-0x70)，重新获取一个0x70的chunk。
 
-首先在main_arena中伪造一个0x70的chunk，将main_arena+40处的指针指向这个fakechunk。下一次申请0x70的chunk就会控制这个chunk。
+首先在main_arena中伪造一个0x70的chunk，将main_arena+48处的指针指向这个fakechunk。下一次申请0x70的chunk就会控制这个chunk。
 
 ![image-20200503105559671](/Users/migraine/Library/Application Support/typora-user-images/image-20200503105559671.png)
 
 ![y3DeY9](https://gitee.com/p0kerface/blog_image_management/raw/master/uPic/y3DeY9.png)
-
-此时我们通过fastbin attack已经获得main_arena区域一部分的写入能力，但是chunk长度还无法覆盖top_chunk和unsortbin的地址。
 
 下图是main_arena处的空间，我们要在main_arena+8伪造一个0x70的fake_chunk。借助这块内存了来修改top_chunk以及恢复unsortbin链。
 
@@ -359,7 +365,7 @@ pwndbg> x/20xg &__malloc_hook+1
 
 ![5lpWBm](https://gitee.com/p0kerface/blog_image_management/raw/master/uPic/5lpWBm.png)
 
-修复了unsortbin
+修复了unsortbin之后
 
 ![MPffgg](https://gitee.com/p0kerface/blog_image_management/raw/master/uPic/MPffgg.png)
 
@@ -372,9 +378,9 @@ add(0x68,b"\x00"*(19+8)+p64(0)*2+p64(0)+p64(0x70)*4+p64(fake_chunk)) #构造fake
 add(0x68,p64(0)*8+p64(0)+p64(0)+p64(main_aren_88)*2) #申请这个fake_chunk，并且修复unsortbin
 ```
 
-在free_hook前面找到一个符合条件的top_chunk,然后覆盖main_arena+0x88指向这个fake_top_chunk
+在free_hook前面找到一个符合伪造top_chunk的条件,然后覆盖main_arena+0x88指向这个fake_top_chunk，之后只需要不断申请chunk，就能申请到free_hook的地址。、
 
-之后只需要不断申请chunk，就能申请到free_hook的地址。这里的initial+16的size位置正好包含一个很大的值，可以用来伪造fake_top_chunk
+例如，这里的initial+16的size位置正好包含一个很大的值，可以用来伪造fake_top_chunk
 
 ```
 free_hook=3790760+libc
@@ -407,9 +413,7 @@ add(0x68,p64(0x1234))
 
 但是chunk数量貌似不够。。。emmm
 
-考虑先分配大量0x20，然后间隔地释放，然后分配0x30，一路分配到0x70应该有可能够。
-
-调试了很久，终于整好凑到能够覆盖free_hook
+经过实践，先分配大量0x20，然后释放到fastbin，然后分配0x30之后释放，一路分配到0x70勉强够修改free_hook。调试了很久，终于整好凑到能够覆盖free_hook
 
 ![FYgj1P](https://gitee.com/p0kerface/blog_image_management/raw/master/uPic/FYgj1P.png)
 
