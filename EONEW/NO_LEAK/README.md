@@ -196,3 +196,22 @@ p.interactive()
 
 ```
 
+**方法二**
+
+发现一个宝藏，通过got表覆盖来凑syscall。不过题目输入字符有限，直接改脚本没改成功。
+
+https://www.4hou.com/posts/Q5rM
+
+
+
+libc中的read代码中syscall距离函数开头只有0xf字节，而距离最近的ret只有0xa字节。可以用于构造一个syscall;ret的gadget，只要将read_got覆盖为0x*f就有16分一的机会能call到syscall。
+
+![Q3pQ4g](https://gitee.com/p0kerface/blog_image_management/raw/master/uPic/Q3pQ4g.png)
+
+
+
+[**ret2csu**](https://xz.aliyun.com/t/4068)
+
+![ZvEVG0](https://gitee.com/p0kerface/blog_image_management/raw/master/uPic/ZvEVG0.png)
+
+![image-20200509165540521](/Users/migraine/Library/Application Support/typora-user-images/image-20200509165540521.png)

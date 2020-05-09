@@ -4,7 +4,9 @@
 
 ![NhvWJE](https://gitee.com/p0kerface/blog_image_management/raw/master/uPic/NhvWJE.png)
 
-没有libc-2.23的环境，就先patch了一下。
+没有libc-2.23的环境，就先patch了一下。题目的libc-2.23和我docker里的版本不同。。。导致之后跑起来总有问题。
+
+![Ay0uyp](https://gitee.com/p0kerface/blog_image_management/raw/master/uPic/Ay0uyp.png)
 
 **审计**
 

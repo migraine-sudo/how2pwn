@@ -126,7 +126,7 @@ qemu-system-x86_64 -initrd rootfs.img -kernel bzImage -append 'console=ttyS0' --
 sudo apt-get install libsdl2-2.0 libsdl2-dev libpixman-1-dev flex bison
 ```
 
-下载Qemu[代码](https://download.qemu.org),并且编译
+下载Qemu[代码](https://download.qemu.org),并且编译，如果运行之后没有显示界面，需要安装SDL（configure之后输出中包含 SDL support       yes (2.0.8)）我的Ubuntu18.04运行最新的qemu5.0无法gdb调试，建议安装qemu4.0系列的版本。
 
 ```
 ./configure --enable-debug  --target-list=x86_64-softmmu
@@ -246,6 +246,10 @@ Reading symbols from ./babydriver.ko...
 (gdb) b *babyopen
 Breakpoint 1 at 0xffffffffc0000030: file /home/atum/PWN/my/babydriver/kernelmodule/babydriver.c, line 28.
 ```
+GDB调试时kernel无法用Ctrl+C进行中断，[解决方案](http://www.kgdb.info/how_gdb_to_stop_kernel/)
+
+
+
 ## LKM编写
 
 hello.c
@@ -313,6 +317,24 @@ gcc报错，是gcc版本太低，需要更新到gcc-5以上
 比如我这里，要手动把Makefile里的路径$(shell uname -r)的值改掉。
 
 ![image-20200425171033591](/Users/migraine/Library/Application Support/typora-user-images/image-20200425171033591.png)
+
+**LKM的一些命令/函数**
+
+insmod:加载模块
+
+lsmod:查看模块
+
+rmmod:删除模块
+
+open:打开模块
+
+Ioctl:int ioctl(ind fd,int request,...)操作模块 
+
+read:读模块
+
+write:写模块
+
+close:关闭模块
 
 
 ## BabyDriver
