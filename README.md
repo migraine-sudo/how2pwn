@@ -34,6 +34,8 @@
 - 高校战役[woodenhouse](https://github.com/migraine-sudo/how2pwn/tree/master/高校战役/woodenbox)
   - House of Roman
   - Partial Write+IO_FILE地址泄露(方法二)
+- HackZone[read_glibc](https://github.com/migraine-sudo/how2pwn/tree/master/HackZone/read_glibc)
+  - 只通过read来实现RCE（可以用于解Ret2Dl类的问题）
 
 **overlap**
 
